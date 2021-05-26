@@ -17,11 +17,13 @@ endif()
 set(CMAKE_BUILD_TYPE "RELEASE")
 
 function (add_code name)
-    add_executable(rt_${name} ${name}.cpp)
+    add_executable(${name} ${name}.cpp)
+    target_link_libraries(${name} cryptopp)
 endfunction()
 
 function (add_cuda_code name)
-    add_executable(rt_${name} ${name}.cu)
+    add_executable(${name} ${name}.cu)
 endfunction()
 
 add_cuda_code(AES)
+add_code(test_crypto)
