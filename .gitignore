@@ -1,0 +1,8 @@
+__pycache__/*
+**.pyc
+.vscode/*
+.clangd/*
+.ccls-cache/*
+**.swp
+build/*
+compile_commands.json
