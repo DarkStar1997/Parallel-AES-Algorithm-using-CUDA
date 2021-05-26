@@ -44,7 +44,8 @@ int main(int argc, char* argv[]) {
     int number_of_zero_pending = infileLength % 16;
     std::vector<aes_block> aes_block_array;
 
-    BYTE key[16 * (14 + 1)];
+    std::vector<BYTE> key(16 * 15);
+    thrust::device_vector<BYTE> cuda_key; cuda_key.reserve(key.size());
     int keyLen = 0;
     int blockLen = 16;
 
@@ -75,6 +76,8 @@ int main(int argc, char* argv[]) {
         aes_block_array = std::vector<aes_block>(block_number + 1);
     else
         aes_block_array = std::vector<aes_block>(block_number);
+    thrust::device_vector<aes_block> cuda_aes_block_array;
+    cuda_aes_block_array.reserve(aes_block_array.size());
     char temp[16];
     FILE* en_fp;
     FILE* de_fp;
@@ -101,8 +104,6 @@ int main(int argc, char* argv[]) {
     cudaGetDeviceProperties(&prop, 0);
     int num_sm = prop.multiProcessorCount;
 
-    aes_block* cuda_aes_block_array;
-    BYTE* cuda_key;  //, *cuda_Sbox;
 
     int thrdperblock = block_number / num_sm;
     if (block_number % num_sm > 0) thrdperblock++;
@@ -118,22 +119,18 @@ int main(int argc, char* argv[]) {
 
     printf("num of sms: %d\nThreads per block: %d\n", num_sm, thrdperblock);
     dim3 BlockperGrid(num_sm);
-    cudaMalloc(&cuda_aes_block_array, block_number * sizeof(class aes_block));
-    cudaMalloc(&cuda_key, 16 * 15 * sizeof(BYTE));
     auto start_enc = std::chrono::steady_clock::now();
-    cudaMemcpy(cuda_aes_block_array, aes_block_array.data(),
-               block_number * sizeof(class aes_block), cudaMemcpyHostToDevice);
-    cudaMemcpy(cuda_key, key, 16 * 15 * sizeof(BYTE), cudaMemcpyHostToDevice);
+    thrust::copy(aes_block_array.begin(), aes_block_array.end(), cuda_aes_block_array.begin());
+    thrust::copy(key.begin(), key.end(), cuda_key.begin());
     
     AES_Encrypt<<<BlockperGrid, ThreadperBlock>>>(
-        cuda_aes_block_array, cuda_key, expandKeyLen, block_number);
+        thrust::raw_pointer_cast(cuda_aes_block_array.data()), thrust::raw_pointer_cast(cuda_key.data()), expandKeyLen, block_number);
     auto end_enc = std::chrono::steady_clock::now();
     std::cout << "Time taken for encryption is " << std::chrono::duration_cast<std::chrono::milliseconds>(end_enc - start_enc).count() << " ms\n";
 
-    auto start_dec = std::chrono::steady_clock::now();
-    cudaMemcpy(aes_block_array.data(), cuda_aes_block_array,
-               block_number * sizeof(class aes_block), cudaMemcpyDeviceToHost);
+    thrust::copy(cuda_aes_block_array.begin(), cuda_aes_block_array.end(), aes_block_array.begin());
 
+    //std::cout << "Writing encrypted output to file\n";
     //for (int i = 0; i < block_number - 1; i++) {
     //    f1printBytes(aes_block_array[i].block, blockLen, en_fp);
     //}
@@ -141,26 +138,26 @@ int main(int argc, char* argv[]) {
     //    f1printBytes(aes_block_array[block_number - 1].block, blockLen, en_fp);
     //else
     //    f1printBytes(aes_block_array[block_number - 1].block, blockLen, en_fp);
+    //std::cout << "Writing finished\n";
 
+    auto start_dec = std::chrono::steady_clock::now();
     AES_Decrypt<<<BlockperGrid, ThreadperBlock>>>(
-        cuda_aes_block_array, cuda_key, expandKeyLen, block_number);
+        thrust::raw_pointer_cast(cuda_aes_block_array.data()), thrust::raw_pointer_cast(cuda_key.data()), expandKeyLen, block_number);
 
-    cudaMemcpy(&aes_block_array[0], cuda_aes_block_array,
-               block_number * sizeof(class aes_block), cudaMemcpyDeviceToHost);
+    thrust::copy(cuda_aes_block_array.begin(), cuda_aes_block_array.end(), aes_block_array.begin());
     
     auto end_dec = std::chrono::steady_clock::now();
     std::cout << "Time taken for decryption is " << std::chrono::duration_cast<std::chrono::milliseconds>(end_dec - start_dec).count() << " ms\n";
 
-    //for (int i = 0; i < block_number - 1; i++) {
-    //    f2printBytes(aes_block_array[i].block, blockLen, de_fp);
-    //}
-    //if (number_of_zero_pending == 0)
-    //    f2printBytes(aes_block_array[block_number - 1].block, blockLen, de_fp);
-    //else
-    //    f3printBytes(aes_block_array[block_number - 1].block, blockLen, de_fp);
-
-    cudaFree(cuda_aes_block_array);
-    cudaFree(cuda_key);
+    std::cout << "Writing decrypted output to file\n";
+    for (int i = 0; i < block_number - 1; i++) {
+        f2printBytes(aes_block_array[i].block, blockLen, de_fp);
+    }
+    if (number_of_zero_pending == 0)
+        f2printBytes(aes_block_array[block_number - 1].block, blockLen, de_fp);
+    else
+        f3printBytes(aes_block_array[block_number - 1].block, blockLen, de_fp);
+    std::cout << "Writing finished\n";
 
     AES_Done();
     fclose(en_fp);

@@ -9,6 +9,9 @@
 #include <cstring>
 #include <cuda.h>
 #include <vector>
+#include <array>
+#include <thrust/device_vector.h>
+#include <thrust/device_ptr.h>
 #include <cuda_runtime.h>
 
 using BYTE = unsigned char;
@@ -244,7 +247,7 @@ strength of 128, 192 or 256 bits 'key' has to be a byte array of length
 16, 24 or 32, respectively. The key expansion is done "in place", meaning 
 that the array 'key' is modified.
 */
-int AES_ExpandKey(BYTE key[], int keyLen) {
+int AES_ExpandKey(std::vector<BYTE> &key, int keyLen) {
     int kl = keyLen, ks, Rcon = 1, i, j;
     BYTE temp[4], temp2[4];
     switch (kl) {
