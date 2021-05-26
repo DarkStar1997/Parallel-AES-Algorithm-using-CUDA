@@ -18,9 +18,17 @@ int main()
     HexEncoder encoder(new FileSink(std::cout));
 
     SecByteBlock key(AES::DEFAULT_KEYLENGTH);
+
+    {
+        std::string path = "/home/rohan/Parallel-AES-Algorithm-using-CUDA/key.txt";
+        std::ifstream in; in.open(path);
+        std::string key_str = {std::istream_iterator<unsigned char>(in), std::istream_iterator<unsigned char>()};
+        std::copy(key_str.begin(), key_str.end(), key.begin());
+        in.close();
+    }
+
     SecByteBlock iv(AES::BLOCKSIZE);
 
-    prng.GenerateBlock(key, key.size());
     prng.GenerateBlock(iv, iv.size());
 
     std::string plain;
@@ -46,8 +54,8 @@ int main()
     std::cout << "Time taken for encryption: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_enc - start_enc).count() << " ms\n";
 
     //std::cout << "Key: ";
-    //encoder.Put(key, key.size());
-    //encoder.MessageEnd();
+    //for(const auto& i : key)
+    //    std::cout << i;
     //std::cout << " (" << key.size() << ")" << std::endl;
 
     //std::cout << "iv: ";
