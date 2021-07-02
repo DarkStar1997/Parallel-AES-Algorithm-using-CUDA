@@ -20,7 +20,7 @@ int main()
     SecByteBlock key(AES::DEFAULT_KEYLENGTH);
 
     {
-        std::string path = "/home/rohan/Parallel-AES-Algorithm-using-CUDA/key.txt";
+        std::string path = "../key.txt";
         std::ifstream in; in.open(path);
         std::string key_str = {std::istream_iterator<unsigned char>(in), std::istream_iterator<unsigned char>()};
         std::copy(key_str.begin(), key_str.end(), key.begin());

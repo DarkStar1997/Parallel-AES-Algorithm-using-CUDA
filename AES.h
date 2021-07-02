@@ -1,21 +1,20 @@
 #ifndef AES_H
 #define AES_H
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>
-#include <filesystem>
 #include <cstring>
+#include <chrono>
 #include <cuda.h>
-#include <vector>
-#include <array>
-#include <thrust/device_vector.h>
-#include <thrust/device_ptr.h>
-#include <cuda_runtime.h>
+#define BYTE unsigned char
 
-using BYTE = unsigned char;
+enum class Mode
+{
+    ENCRYPTION,
+    DECRYPTION,
+};
 
 class aes_block
 {
@@ -27,7 +26,6 @@ void printBytes(BYTE b[], int len) {
 int i;
 for (i=0; i<len; i++)
     printf("%x ", b[i]);
-//    cout << hex << b[i] << " " ;
 printf("\n");
 }
 
@@ -35,52 +33,24 @@ printf("\n");
 void f1printBytes(BYTE b[], int len, FILE* fp) {
 int i;
 for (i=0; i<len; i++)
-   fprintf(fp, "%02x ", b[i]);
-//    cout << hex << b[i] << " " ;
-fprintf(fp, "\n");
+   fprintf(fp, "%c", b[i]);
 }
 
 void f2printBytes(BYTE b[], int len, FILE* fp) {
     int i;
-    for (i = 0; i < len; i++) {
+    for (i=0; i<len; i++){
         fprintf(fp, "%c", b[i]);
     }
-    //    cout << hex << b[i] << " " ;
-    // fprintf(fp, "\n");
 }
-
 void f3printBytes(BYTE b[], int len, FILE* fp) {
     int i;
-    for (i = 0; i < len; i++) {
-        if (b[i] == '\0') {
-            return;
+    for (i=0; i<len; i++){
+        if(b[i]=='\0'){
+            return ;
         }
         fprintf(fp, "%c", b[i]);
-        // printf("%x ", b[i]);
     }
-    //    cout << hex << b[i] << " " ;
-    // fprintf(fp, "\n");
 }
-
-/******************************************************************************/
-// The following lookup tables and functions are for internal use only!
-
-/*
-BYTE AES_Sbox[] = {99,124,119,123,242,107,111,197,48,1,103,43,254,215,171,
-118,202,130,201,125,250,89,71,240,173,212,162,175,156,164,114,192,183,253,
-147,38,54,63,247,204,52,165,229,241,113,216,49,21,4,199,35,195,24,150,5,154,
-7,18,128,226,235,39,178,117,9,131,44,26,27,110,90,160,82,59,214,179,41,227,
-47,132,83,209,0,237,32,252,177,91,106,203,190,57,74,76,88,207,208,239,170,
-251,67,77,51,133,69,249,2,127,80,60,159,168,81,163,64,143,146,157,56,245,
-188,182,218,33,16,255,243,210,205,12,19,236,95,151,68,23,196,167,126,61,
-100,93,25,115,96,129,79,220,34,42,144,136,70,238,184,20,222,94,11,219,224,
-50,58,10,73,6,36,92,194,211,172,98,145,149,228,121,231,200,55,109,141,213,
-78,169,108,86,244,234,101,122,174,8,186,120,37,46,28,166,180,198,232,221,
-116,31,75,189,139,138,112,62,181,102,72,3,246,14,97,53,87,185,134,193,29,
-158,225,248,152,17,105,217,142,148,155,30,135,233,206,85,40,223,140,161,
-137,13,191,230,66,104,65,153,45,15,176,84,187,22};
-*/
-
 
 BYTE AES_Sbox[] =
 {   /*0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f */
@@ -101,13 +71,6 @@ BYTE AES_Sbox[] =
     0xe1,0xf8,0x98,0x11,0x69,0xd9,0x8e,0x94,0x9b,0x1e,0x87,0xe9,0xce,0x55,0x28,0xdf, /*e*/
     0x8c,0xa1,0x89,0x0d,0xbf,0xe6,0x42,0x68,0x41,0x99,0x2d,0x0f,0xb0,0x54,0xbb,0x16  /*f*/
 };
-
-
-//BYTE AES_ShiftRowTab[] = {0,5,10,15,4,9,14,3,8,13,2,7,12,1,6,11};
-
-//BYTE AES_Sbox_Inv[256];
-//BYTE AES_ShiftRowTab_Inv[16];
-//BYTE AES_xtime[256];
 
 __device__ void AES_SubBytes(BYTE state[], BYTE sbox[]) {
 int i;
@@ -261,16 +224,13 @@ AES_Sbox_Inv[240] = 0x17;AES_Sbox_Inv[241] = 0x2b;AES_Sbox_Inv[242] = 0x4;AES_Sb
     }
 }
 
-// AES_Done: release memory reserved by AES_Init. 
-// Call this function after the last encryption/decryption operation.
-void AES_Done() {}
 
 /* AES_ExpandKey: expand a cipher key. Depending on the desired encryption 
 strength of 128, 192 or 256 bits 'key' has to be a byte array of length 
 16, 24 or 32, respectively. The key expansion is done "in place", meaning 
 that the array 'key' is modified.
 */
-int AES_ExpandKey(std::vector<BYTE> &key, int keyLen) {
+int AES_ExpandKey(BYTE key[], int keyLen) {
     int kl = keyLen, ks, Rcon = 1, i, j;
     BYTE temp[4], temp2[4];
     switch (kl) {
@@ -304,8 +264,6 @@ int AES_ExpandKey(std::vector<BYTE> &key, int keyLen) {
     return ks;
 }
 
-// AES_Encrypt: encrypt the 16 byte array 'block' with the previously expanded key 'key'.
-//__global__ void AES_Encrypt(aes_block*, BYTE*, int, int);
 __global__ void AES_Encrypt(aes_block aes_block_array[], BYTE key[], int keyLen, int block_number) {
     int global_thread_index = blockDim.x*blockIdx.x + threadIdx.x;
 //    printf("global thread index = %d\n", global_thread_index);
@@ -325,10 +283,8 @@ __global__ void AES_Encrypt(aes_block aes_block_array[], BYTE key[], int keyLen,
         }
         __syncthreads();
         BYTE block[16]; 
-        //cudaMemcpy(block, aes_block_array[global_thread_index].block, 16*sizeof(BYTE), cudaMemcpyDeviceToDevice);
         for(int i=0; i<16; i++){
             block[i] = aes_block_array[global_thread_index].block[i];
-//		printf("%d %d %d\n",i, global_thread_index, block[i]);
         }
         int l = keyLen, i;
         //printBytes(block, 16);
@@ -342,19 +298,12 @@ __global__ void AES_Encrypt(aes_block aes_block_array[], BYTE key[], int keyLen,
         AES_SubBytes(block, AES_Sbox);
         AES_ShiftRows(block, AES_ShiftRowTab);
         AES_AddRoundKey(block, &key[i]);
-//        for(int j=15; j>=0; j--)
-//{
-//printf("==%d %d\n",j, aes_block_array[global_thread_index].block[j] );
-//}
+        
         for(int i=0; i<16; i++){
-  //          printf("%d %d  %d\n",i, global_thread_index, aes_block_array[global_thread_index].block[i]);
          aes_block_array[global_thread_index].block[i] = block[i];
         }
-        //printf("block %d encrypted\n", global_thread_index);
     }
 }
-
-// AES_Decrypt: decrypt the 16 byte array 'block' with the previously expanded key 'key'.
 
 __global__ void AES_Decrypt(aes_block aes_block_array[], BYTE key[], int keyLen, int block_number) {
     int global_thread_index = blockDim.x*blockIdx.x + threadIdx.x;
@@ -393,111 +342,5 @@ AES_AddRoundKey(block, &key[0]);
         }
 }
 }
-
-void encrypt(const std::filesystem::path key_path, const std::filesystem::path input_file, const std::filesystem::path output_file, bool ctrl = true)
-{
-    std::cout << (ctrl ? "Encryption" : "Decryption") << " mode\n";
-    int infileLength = std::filesystem::file_size(input_file);
-    std::cout << "Length of input file: " << infileLength << std::endl;
-
-    int block_number = infileLength / 16;
-    int number_of_zero_pending = infileLength % 16;
-    std::vector<aes_block> aes_block_array;
-
-    std::vector<BYTE> key(16 * 15);
-    thrust::device_vector<BYTE> cuda_key; cuda_key.reserve(key.size());
-    int keyLen = 0;
-    int blockLen = 16;
-    
-    std::ifstream key_fp;
-    key_fp.open(key_path);
-    while (key_fp.peek() != EOF) {
-        key_fp >> key[keyLen];
-        if (key_fp.eof()) break;
-        keyLen++;
-    }
-    
-    int expandKeyLen = AES_ExpandKey(key, keyLen);
-
-    if (number_of_zero_pending != 0)
-        aes_block_array = std::vector<aes_block>(block_number + 1);
-    else
-        aes_block_array = std::vector<aes_block>(block_number);
-    thrust::device_vector<aes_block> cuda_aes_block_array;
-    cuda_aes_block_array.reserve(aes_block_array.size());
-    
-    char temp[16];
-    FILE* en_fp;
-    en_fp = fopen(output_file.c_str(), "wb");
-
-    std::ifstream ifs; ifs.open(input_file, std::ifstream::binary);
-    for (int i = 0; i < block_number; i++) {
-        ifs.read(temp, 16);
-        for (int j = 0; j < 16; j++) {
-            aes_block_array[i].block[j] = (unsigned char)temp[j];
-        }
-    }
-    if (number_of_zero_pending != 0) {
-        ifs.read(temp, number_of_zero_pending);
-        for (int j = 0; j < 16; j++) {
-            aes_block_array[block_number].block[j] = (unsigned char)temp[j];
-        }
-        for (int j = 1; j <= 16 - number_of_zero_pending; j++)
-            aes_block_array[block_number].block[16 - j] = '\0';
-        block_number++;
-    }
-
-    cudaSetDevice(0); 
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, 0);
-    std::cout << "CUDA Device name: " << prop.name << '\n';
-    int num_sm = prop.multiProcessorCount;
-    
-    int thrdperblock = block_number / num_sm;
-    if (block_number % num_sm > 0) thrdperblock++;
-
-    if (thrdperblock > 1024) {
-        thrdperblock = 1024;
-        num_sm = block_number / 1024;
-        if (block_number % 1024 > 0) {
-            num_sm++;
-        }
-    }
-    dim3 ThreadperBlock(thrdperblock);
-
-    printf("num of sms: %d\nThreads per block: %d\n", num_sm, thrdperblock);
-    dim3 BlockperGrid(num_sm);
-    auto start_enc = std::chrono::steady_clock::now();
-    thrust::copy(aes_block_array.begin(), aes_block_array.end(), cuda_aes_block_array.begin());
-    thrust::copy(key.begin(), key.end(), cuda_key.begin());
-    
-    if(ctrl)
-    {
-        AES_Encrypt<<<BlockperGrid, ThreadperBlock>>>(
-                thrust::raw_pointer_cast(cuda_aes_block_array.data()), thrust::raw_pointer_cast(cuda_key.data()), expandKeyLen, block_number);
-    }
-    else
-    {
-        AES_Decrypt<<<BlockperGrid, ThreadperBlock>>>(
-                thrust::raw_pointer_cast(cuda_aes_block_array.data()), thrust::raw_pointer_cast(cuda_key.data()), expandKeyLen, block_number);
-    }
-    
-    auto end_enc = std::chrono::steady_clock::now();
-    std::cout << "Time taken for encryption is " << std::chrono::duration_cast<std::chrono::milliseconds>(end_enc - start_enc).count() << " ms\n";
-
-    thrust::copy(cuda_aes_block_array.begin(), cuda_aes_block_array.end(), aes_block_array.begin());
-
-    std::cout << "Writing encrypted output to file\n";
-    for (int i = 0; i < block_number - 1; i++) {
-        f2printBytes(aes_block_array[i].block, blockLen, en_fp);
-    }
-    if (number_of_zero_pending == 0)
-        f2printBytes(aes_block_array[block_number - 1].block, blockLen, en_fp);
-    else
-        f3printBytes(aes_block_array[block_number - 1].block, blockLen, en_fp);
-    std::cout << "Writing finished\n";
-    fclose(en_fp);
-}
-
 
 #endif /* AES_H */
