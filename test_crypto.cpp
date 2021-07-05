@@ -11,7 +11,7 @@
 #include <chrono>
 #include <iterator>
 
-int main()
+int main(int argc, char** argv)
 {
     using namespace CryptoPP;
     AutoSeededRandomPool prng;
@@ -20,7 +20,7 @@ int main()
     SecByteBlock key(AES::DEFAULT_KEYLENGTH);
 
     {
-        std::string path = "../key.txt";
+        std::string path = argv[2];
         std::ifstream in; in.open(path);
         std::string key_str = {std::istream_iterator<unsigned char>(in), std::istream_iterator<unsigned char>()};
         std::copy(key_str.begin(), key_str.end(), key.begin());
@@ -34,7 +34,7 @@ int main()
     std::string plain;
    
     {
-        std::string path = "/home/rohan/Desktop/vim-test/build/random_data.txt";
+        std::string path = argv[1];
         std::ifstream in; in.open(path);
         plain = {std::istream_iterator<unsigned char>(in), std::istream_iterator<unsigned char>()};
         in.close();

@@ -2,7 +2,8 @@
 
 int main(int argc, char* argv[]) {
 
-    std::chrono::steady_clock::time_point t1, t2, t3, t4;
+    cudaEvent_t start, stop;
+    float time_k = 0.0, time_h_to_d = 0.0, time_d_to_h = 0.0;
     std::ifstream ifs;
     Mode mode;
     
@@ -114,20 +115,36 @@ int main(int argc, char* argv[]) {
 
     printf("num of sms: %d\nThreads per block: %d\n", num_sm, thrdperblock);
     dim3 BlockperGrid(num_sm);
-    t1 = std::chrono::steady_clock::now();
+    
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    
+    cudaEventRecord(start, 0);
     cudaMalloc(&cuda_aes_block_array, block_number*sizeof(class aes_block));
     cudaMalloc(&cuda_key,16*15*sizeof(BYTE) );
     cudaMemcpy(cuda_aes_block_array, aes_block_array, block_number*sizeof(class aes_block), cudaMemcpyHostToDevice);
     cudaMemcpy(cuda_key, key, 16*15*sizeof(BYTE), cudaMemcpyHostToDevice);
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(start);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&time_h_to_d, start, stop);
+    
     
     if(mode == Mode::ENCRYPTION)
     {
-        t3 = std::chrono::steady_clock::now();
+        cudaEventRecord(start, 0);
         AES_Encrypt <<< BlockperGrid, ThreadperBlock>>>(cuda_aes_block_array, cuda_key, expandKeyLen, block_number);
-        t4 = std::chrono::steady_clock::now();
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(start);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&time_k, start, stop);
 
+        cudaEventRecord(start, 0);
         cudaMemcpy(aes_block_array, cuda_aes_block_array, block_number*sizeof(class aes_block), cudaMemcpyDeviceToHost);
-        t2 = std::chrono::steady_clock::now();
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(start);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&time_d_to_h, start, stop);
 
         for(int i=0; i<block_number-1; i++){
             f1printBytes(aes_block_array[i].block, blockLen, out_fp);
@@ -140,12 +157,19 @@ int main(int argc, char* argv[]) {
 
     else if(mode == Mode::DECRYPTION)
     {
-        t3 = std::chrono::steady_clock::now();
+        cudaEventRecord(start, 0);
         AES_Decrypt <<< BlockperGrid, ThreadperBlock>>>(cuda_aes_block_array, cuda_key, expandKeyLen, block_number);
-        t4 = std::chrono::steady_clock::now();
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(start);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&time_k, start, stop);
 
+        cudaEventRecord(start, 0);
         cudaMemcpy(aes_block_array, cuda_aes_block_array, block_number*sizeof(class aes_block), cudaMemcpyDeviceToHost);
-        t2 = std::chrono::steady_clock::now();
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(start);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&time_d_to_h, start, stop);
 
         for(int i=0; i<block_number-1; i++){
             f3printBytes(aes_block_array[i].block, blockLen, out_fp);
@@ -160,19 +184,19 @@ int main(int argc, char* argv[]) {
     cudaFree(cuda_key);
 
     fclose(out_fp);
-    double time_for_encdec_with_memory_transfer = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-    double time_for_encdec_without_memory_transfer = std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3).count();
 
+    std::cout << "Time for memory transfer from host to device = " << time_h_to_d << " ms\n";
+    
     if(mode == Mode::ENCRYPTION)
     {
-        std::cout << "Time for encryption with memory transfer = " << time_for_encdec_with_memory_transfer << " ms\n";
-        std::cout << "Time for encryption without memory transfer = " << time_for_encdec_without_memory_transfer << " ms\n";
+        std::cout << "Execution time for encryption kernel = " << time_k << " ms\n";
     }
     else if(mode == Mode::DECRYPTION)
     {
-        std::cout << "Time for decryption with memory transfer = " << time_for_encdec_with_memory_transfer << " ms\n";
-        std::cout << "Time for decryption without memory transfer = " << time_for_encdec_without_memory_transfer << " ms\n";
+        std::cout << "Execution time for decryption kernel = " << time_k << " ms\n";
     }
 
+    std::cout << "Time for memory transfer from device to host = " << time_d_to_h << " ms\n";
+    
     return 0;
 }
