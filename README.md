@@ -1,20 +1,33 @@
 # Parallel-AES-Algorithm-using-CUDA
-This project parallelized the process of AES encryption with CUDA. We can enhance the overall speedup to 3 times than the original serial version.
 
-AES program first encrypt the input file with the user-defined key file. Then, to check the correctness of our encryption, we decrypt the encrypted file using the same key file.
+This project demonstrates AES encryption and decryption on NVIDIA GPUs using CUDA and achieves nearly 5x performance boost compared to a decent serial CPU implementation.
 
-## Compile using Makefile
+## Building the project
 ```bash
+mkdir build
+cd build/
+cmake ..
 make
 ```
 ## Run
 Usage:
 ```baseh
-./AES [file to encrypt] [key file] [filename of encrypted file] [filename of decrypted file]
+./AES [mode] [input file] [key file] [output file]
 ```
-For example, you can try encrypting provided "novel.txt" file with "key.txt" as a key file:
-```bash
-./AES novel.txt key.txt encrypt.txt decrypt.txt
-```
-* ```encript.txt``` will be the result of encryption from ```novel.txt``` 
-* ```decrypt.txt``` will be the result of decryption from ```encrypt.txt```.
+
+mode - encrypt / decrypt
+input file - the file to be encrypted / decrypted
+key file - the key file to be taken as input
+output file - the encrypted / decrypted file as output
+
+Example of usage:
+
+To encrypt a file input.txt with key.txt as input to generate encrypted.txt use the command:
+
+./AES encrypt input.txt key.txt encrypted.txt
+
+To decrypt the file encrypted.txt with key.txt as input to generated decrypted.txt use the command:
+
+./AES decrypt encrypted.txt key.txt decrypted.txt
+
+The files input.txt and decrypted.txt should be identical.
