@@ -36,7 +36,7 @@ Results for AES encryption
 
 Size of Text file | Number of Characters | AES CPU | AES GPU | Speedup
 ---------------------------------------------------------------------
-98KB | 100K | ~0ms | 0.18ms | -
+98KB | 100K | ~0ms | 0.18ms | NA
 977KB | 1M | 2ms | 0.64ms | 3.125
 4.8MB | 5M | 6ms | 2.46ms | 2.43
 9.6MB | 10M | 11ms | 4.68ms | 2.35
