@@ -1,7 +1,7 @@
 
 # Parallel-AES-Algorithm-using-CUDA
 
-This project demonstrates AES encryption and decryption on NVIDIA GPUs using CUDA and achieves nearly 5x performance boost compared to a decent serial CPU implementation.
+This project demonstrates AES encryption and decryption on NVIDIA GPUs using CUDA and achieves upto 3x performance boost compared to a decent serial CPU implementation.
 
 ## Building the project
 ```bash
