@@ -45,14 +45,14 @@ Size of Text file | Number of Characters | AES CPU | AES GPU | Speedup
 
 It can be seen that a maximum speedup of 3x can be reached with the GPU implementation. But it is to be noted that most of the time is taken in memory transfer between host and device. Checkout the following screenshot:
 
-![AES CUDA](https://imgur.com/bdXKmqq)
+![AES CUDA](https://imgur.com/bdXKmqq.png)
 
 This can be further verified from the nvprof output:
 
-![nvprof](https://imgur.com/YIGR5ew)
+![nvprof](https://imgur.com/YIGR5ew.png)
 
 Please note the timers for the kernel which causes the actual encrytion to take place:
 
-![CUDA Kernel](https://imgur.com/fOepkRH)
+![CUDA Kernel](https://imgur.com/fOepkRH.png)
 
 Hence the actual encryption time is very negligible compared to the memory transfer between the host and device.
