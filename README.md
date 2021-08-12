@@ -35,7 +35,7 @@ The files input.txt and decrypted.txt should be identical.
 Results for AES encryption
 
 Size of Text file | Number of Characters | AES CPU | AES GPU | Speedup
------------------   --------------------   -------  --------   -------
+---------------------------------------------------------------------
 98KB | 100K | ~0ms | 0.18ms | -
 977KB | 1M | 2ms | 0.64ms | 3.125
 4.8MB | 5M | 6ms | 2.46ms | 2.43
