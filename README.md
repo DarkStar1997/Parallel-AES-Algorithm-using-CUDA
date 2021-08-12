@@ -1,3 +1,4 @@
+
 # Parallel-AES-Algorithm-using-CUDA
 
 This project demonstrates AES encryption and decryption on NVIDIA GPUs using CUDA and achieves nearly 5x performance boost compared to a decent serial CPU implementation.
@@ -11,7 +12,8 @@ make
 ```
 ## Run
 Usage:
-```baseh
+
+```bash
 ./AES [mode] [input file] [key file] [output file]
 ```
 
@@ -35,9 +37,8 @@ The files input.txt and decrypted.txt should be identical.
 Results for AES encryption
 
 Size of Text file | Number of Characters | AES CPU | AES GPU | Speedup
----------------------------------------------------------------------
-
-98KB | 100K | ~0ms | 0.18ms | NA |
+|---|---|---|---|---|
+98KB  | 100K | ~0ms | 0.18ms | NA |
 977KB | 1M | 2ms | 0.64ms | 3.125 |
 4.8MB | 5M | 6ms | 2.46ms | 2.43 |
 9.6MB | 10M | 11ms | 4.68ms | 2.35 |
