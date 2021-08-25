@@ -61,9 +61,13 @@ int main(int argc, char* argv[]) {
     int expandKeyLen = AES_ExpandKey(key, keyLen);
 
     if(number_of_zero_pending != 0)
-        aes_block_array = new aes_block [ block_number + 1];
+    {
+        cudaError_t status = cudaMallocHost((void**)&aes_block_array, (block_number + 1) * sizeof(aes_block));
+    }
     else
-        aes_block_array = new aes_block[ block_number ];
+    {
+        cudaError_t status = cudaMallocHost((void**)&aes_block_array, (block_number) * sizeof(aes_block));
+    }
     char temp[16];
     FILE* out_fp;
     
@@ -182,6 +186,7 @@ int main(int argc, char* argv[]) {
 
     cudaFree(cuda_aes_block_array);
     cudaFree(cuda_key);
+    cudaFreeHost(aes_block_array);
 
     fclose(out_fp);
 
